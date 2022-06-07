@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use rand::XorShiftRng;
+use rand_xorshift::XorShiftRng;
 
 
 pub struct RNG {
@@ -38,11 +38,11 @@ impl RNG {
     pub fn next_u32(&mut self, ceiling: u32) -> u32 {
         if let Some(val) = self.get_next_value() {
             if val > ceiling {
-                panic!(format!("stubbed value is greater than ceiling; found {}", val));
+                panic!("stubbed value is greater than ceiling; found {}", val);
             }
             return val;
         }
-        self.system_rng.gen_range(0, ceiling)
+        self.system_rng.gen_range(0..ceiling)
     }
 
     pub fn next_usize(&mut self, ceiling: usize) -> usize {
@@ -56,7 +56,7 @@ impl RNG {
 
     pub fn choose<T>(&mut self, values: &[T]) -> T where T: Clone {
         // TODO: can't set these
-        values[self.system_rng.gen_range(0, values.len())].clone()
+        values[self.system_rng.gen_range(0..values.len())].clone()
     }
 
     pub fn set_next_values(&mut self, values: &[u32]) {

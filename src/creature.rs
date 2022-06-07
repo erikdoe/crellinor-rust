@@ -55,7 +55,7 @@ impl Creature {
     // calculated attributes
 
     pub fn age(&self) -> u64 {
-        (self.lastprocd - self.bcycle)
+        self.lastprocd - self.bcycle
     }
 
     pub fn pp_program(&self, rsize: usize) -> Vec<String> {

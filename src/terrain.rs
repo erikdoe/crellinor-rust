@@ -69,7 +69,7 @@ impl Terrain {
             90 => ((pos.0 + 1) % s, pos.1),
             180 => (pos.0, (pos.1 + 1) % s),
             270 => ((pos.0 + s - 1) % s, pos.1),
-            _ => panic!(format!("*** invalid bearing; found {}", bearing)),
+            _ => panic!("*** invalid bearing; found {}", bearing),
         }
     }
 
@@ -117,7 +117,7 @@ impl Terrain {
             90 => (n, 0),
             180 => (0, n),
             270 => (-1 * n, 0),
-            _ => panic!(format!("*** invalid bearing; found {}", bearing)),
+            _ => panic!("*** invalid bearing; found {}", bearing),
         }
     }
 

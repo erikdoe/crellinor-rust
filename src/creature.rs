@@ -55,6 +55,9 @@ impl Creature {
     // calculated attributes
 
     pub fn age(&self) -> u64 {
+        if self.lastprocd == 0 {
+            return 0;
+        }
         self.lastprocd - self.bcycle
     }
 
@@ -256,5 +259,13 @@ mod tests {
         let out = c.pp_program(3);
 
         println!("** {:?}", out);
+    }
+
+    #[test]
+    fn age_when_not_processed_yet() {
+        let mut c = Creature::new(vec![MOV, TUL, TUR, EAT, NOP, BFA]);
+        c.bcycle = 512;
+
+        assert_eq!(0, c.age())
     }
 }

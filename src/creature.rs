@@ -35,12 +35,20 @@ impl Creature {
 
     // methods that change attributes/fields
 
-    pub fn inc_pc(&mut self) {
-        self.pc = (self.pc + 1) % self.program.len();
+    pub fn pc_reset(&mut self) {
+        self.pc = 0;
     }
 
-    pub fn inc_pc_by(&mut self, n: usize) {
-        self.pc = (self.pc + n) % self.program.len();
+    pub fn pc_incr(&mut self, ring_size: usize) {
+        let pc_ring = self.pc % ring_size;
+        let new_pc_ring = (pc_ring + 1) % ring_size;
+        self.pc = self.pc - pc_ring + new_pc_ring;
+    }
+
+    pub fn pc_incr_ring(&mut self, ring_size: usize, ring_count: usize) {
+        let ring = self.pc / ring_size;
+        let new_ring = (ring + 1) % ring_count;
+        self.pc = new_ring * ring_size;
     }
 
     pub fn current_instr(&self) -> Instr {
@@ -101,7 +109,7 @@ impl Creature {
             return;
         }
         let instr = self.current_instr();
-        self.inc_pc();
+        self.pc_incr(ctx.params.ring_size);
         self.exec_instr(instr, ctx);
     }
 
@@ -113,8 +121,8 @@ impl Creature {
             Instr::TUL => self.exec_turn_left(),
             Instr::MOV => self.exec_move(ctx),
             Instr::EAT => self.exec_eat(ctx),
-            Instr::JMP => self.exec_jump_abs(ctx),
-            Instr::JRE => self.exec_jump_rel(ctx),
+            Instr::JMP => self.exec_jump(ctx),
+            Instr::JMZ => self.exec_jump_zero(ctx),
             Instr::BFH => self.exec_branch_food_here(ctx),
             Instr::BFA => self.exec_branch_food_ahead(ctx),
             Instr::NOP => self.exec_nop(),
@@ -158,22 +166,19 @@ impl Creature {
 
     // jumps
 
-    fn exec_jump_rel(&mut self, ctx: &PContext) {
-        self.inc_pc_by(ctx.params.ring_len - 1);
+    fn exec_jump(&mut self, ctx: &PContext) {
+        self.pc_incr_ring(ctx.params.ring_size, ctx.params.ring_count)
     }
 
-    fn exec_jump_abs(&mut self, ctx: &PContext) {
-        let p = self.pc % ctx.params.ring_len;
-        if p > 0 {
-            self.inc_pc_by(ctx.params.ring_len - p);
-        }
+    fn exec_jump_zero(&mut self, _: &PContext) {
+        self.pc_reset();
     }
 
     // check and branch
 
     fn exec_branch_food_here(&mut self, ctx: &mut PContext) {
         if ctx.terrain.plant_at(ctx.pos).is_some() {
-            self.exec_jump_abs(ctx);
+            self.exec_jump(ctx);
         }
     }
 
@@ -182,7 +187,7 @@ impl Creature {
         for _ in 0..ctx.params.view_distance {
             fpos = ctx.terrain.pos_ahead(fpos, self.bearing);
             if ctx.terrain.plant_at(fpos).is_some() {
-                self.exec_jump_abs(ctx);
+                self.exec_jump(ctx);
                 return;
             }
         }
@@ -263,9 +268,41 @@ mod tests {
 
     #[test]
     fn age_when_not_processed_yet() {
-        let mut c = Creature::new(vec![MOV, TUL, TUR, EAT, NOP, BFA]);
+        let mut c = Creature::new(vec![NOP]);
         c.bcycle = 512;
-
         assert_eq!(0, c.age())
+    }
+
+    #[test]
+    fn pc_stays_in_ring0() {
+        let mut c = Creature::new(vec![NOP]);
+        c.pc = 3;
+        c.pc_incr(4);
+        assert_eq!(0, c.pc)
+    }
+
+    #[test]
+    fn pc_stays_in_ring1() {
+        let mut c = Creature::new(vec![NOP]);
+        c.pc = 6;
+        c.pc_incr(4);
+        c.pc_incr(4);
+        assert_eq!(4, c.pc)
+    }
+
+    #[test]
+    fn pc_moves_to_next_ring() {
+        let mut c = Creature::new(vec![NOP]);
+        c.pc = 6;
+        c.pc_incr_ring(4, 3);
+        assert_eq!(8, c.pc)
+    }
+
+    #[test]
+    fn pc_wraps_to_first_ring() {
+        let mut c = Creature::new(vec![NOP]);
+        c.pc = 6;
+        c.pc_incr_ring(4, 2);
+        assert_eq!(0, c.pc)
     }
 }

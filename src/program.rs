@@ -8,15 +8,7 @@ pub enum Instr {
     MOV,
     EAT,
     JMP,
-    JRE,
+    JMZ,
     BFH,
     BFA,
-}
-
-
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub enum RingMode {
-    Continue,
-    Repeat,
-    Return,
 }

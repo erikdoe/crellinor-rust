@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use serde_derive::*;
 use maplit::*;
 use crate::program::Instr;
-use crate::program::RingMode;
 use crate::program::Instr::*;
 
 
@@ -28,8 +27,7 @@ pub struct Params {
     pub view_distance: u32,         // high performance impact
 
     pub ring_count: usize,
-    pub ring_len: usize,
-    pub ring_mode: RingMode,
+    pub ring_size: usize,
 
     pub instructions: HashMap<Instr, u64>,
 }
@@ -57,12 +55,18 @@ impl Params {
             min_mating_ep: 4000,
             view_distance: 4,
 
-            ring_count: 4,
-            ring_len: 4,
-            ring_mode: RingMode::Continue,
+            ring_size: 3,
+            ring_count: 2,
 
             instructions: Params::default_instr_map(),
         }
+    }
+
+    pub fn for_testing() -> Params {
+        let mut params = Params::new();
+        params.ring_size = 3;
+        params.ring_count = 2;
+        params
     }
 
     fn default_instr_map() -> HashMap<Instr, u64> {
@@ -73,7 +77,7 @@ impl Params {
             TUL =>  3,
             NOP =>  1,
             JMP =>  1,
-            JRE =>  1,
+            JMZ =>  1,
             BFH =>  1,
             BFA =>  1,
         }

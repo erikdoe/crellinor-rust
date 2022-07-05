@@ -3,7 +3,6 @@ use std::time::Instant;
 use std::thread;
 use maplit::*;
 use crate::program::Instr::*;
-use crate::program::RingMode;
 use crate::params::Params;
 use crate::random::RNG;
 use crate::world::World;
@@ -82,8 +81,7 @@ fn make_world() -> World {
         view_distance: 8,
 
         ring_count: rng.choose(&[3, 4, 5, 6, 7]),
-        ring_len: rng.choose(&[3, 4, 5, 6, 7]),
-        ring_mode: RingMode::Continue,
+        ring_size: rng.choose(&[3, 4, 5, 6, 7]),
 
         instructions: hashmap! {
             EAT => 30,
@@ -92,7 +90,7 @@ fn make_world() -> World {
             TUL => 10,
             NOP =>  1,
             JMP =>  2,
-            JRE =>  2,
+            JMZ =>  2,
             BFH =>  3,
             BFA =>  3,
         },

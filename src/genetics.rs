@@ -7,7 +7,7 @@ use crate::params::Params;
 pub fn rand_program(params: &Params, rng: &mut RNG) -> Vec<Instr> {
     let instr_list = params.instr_list();
     iter::repeat_with(|| instr_list[rng.next_usize(instr_list.len())].clone())
-        .take(params.ring_count * params.ring_len).collect()
+        .take(params.ring_count * params.ring_size).collect()
 }
 
 

@@ -46,12 +46,12 @@ fn processing_increments_pc_and_updates_lastprocd() {
 }
 
 #[test]
-fn processing_restarts_program_at_end() {
+fn processing_restarts_ring_at_end() {
     let mut w = World::for_testing();
     // test is designed assuming NOP is 1 cycle
     assert_eq!(1, w.params.instr_cycles(&NOP));
-    w.add_creature(Creature::new(vec![NOP, NOP]), (0, 0));
-    w.do_cycles(3);
+    w.add_creature(Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP]), (0, 0));
+    w.do_cycles(4);
     assert_eq!(1, w.creature_at((0, 0)).unwrap().pc);
 }
 
@@ -91,7 +91,7 @@ fn processing_each_creature_once_per_cycle() {
 fn processing_removes_creature_when_it_reaches_max_age() {
     let mut w = World::for_testing();
     w.params.creature_max_age = 10;
-    let c = Creature::new(vec![NOP]);
+    let c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP]);
     w.add_creature(c, (1, 2));
     w.do_cycles(9);
     assert_eq!(true, w.creature_at((1, 2)).is_some());
@@ -247,7 +247,7 @@ fn creatures_dont_mate_if_parent1_has_not_eaten_at_least_twice() {
 #[test]
 fn processing_takes_one_ep_per_cycle() {
     let mut w = World::for_testing();
-    w.add_creature(Creature::new(vec![NOP]), (0, 0));
+    w.add_creature(Creature::new(vec![NOP, NOP, NOP]), (0, 0));
     w.do_cycles(2);
     let bob = w.creature_at((0, 0)).unwrap();
     assert_eq!(w.params.creature_start_ep - 2, bob.ep);
@@ -308,7 +308,7 @@ fn eat_does_not_exceed_creatures_map_ep() {
 #[test]
 fn jump_jumps_to_first_position_in_next_ring() {
     let mut w = World::for_testing();
-    w.add_creature(Creature::new(vec![NOP, JMP, EAT, NOP, MOV, NOP, NOP, NOP]), (0, 0));
+    w.add_creature(Creature::new(vec![NOP, JMP, EAT, MOV, NOP, NOP]), (0, 0));
     w.do_cycles(cycle_count(&w.params, &[NOP, JMP]));
     assert_eq!(MOV, w.creature_at((0, 0)).unwrap().current_instr());
 }
@@ -316,18 +316,20 @@ fn jump_jumps_to_first_position_in_next_ring() {
 #[test]
 fn jump_jumps_to_first_position_in_next_ring_also_when_last_in_ring() {
     let mut w = World::for_testing();
-    w.add_creature(Creature::new(vec![NOP, NOP, NOP, JMP, MOV, NOP, NOP, NOP]), (0, 0));
-    w.do_cycles(cycle_count(&w.params, &[NOP, NOP, NOP, JMP]));
+    w.add_creature(Creature::new(vec![NOP, NOP, JMP, MOV, NOP, NOP]), (0, 0));
+    w.do_cycles(cycle_count(&w.params, &[NOP, NOP, JMP]));
     assert_eq!(MOV, w.creature_at((0, 0)).unwrap().current_instr());
 }
 
 
 #[test]
-fn jump_relative_jumps_to_same_position_in_next_ring() {
+fn jump_zero_jumps_to_beginning_of_ring0() {
     let mut w = World::for_testing();
-    w.add_creature(Creature::new(vec![NOP, JRE, EAT, NOP, NOP, MOV, TUL]), (0, 0));
-    w.do_cycles(cycle_count(&w.params, &[NOP, JRE]));
-    assert_eq!(MOV, w.creature_at((0, 0)).unwrap().current_instr());
+    w.params.ring_size = 3;
+    w.params.ring_count = 2;
+    w.add_creature(Creature::new(vec![NOP, JMP, EAT, TUL, JMZ, TUR]), (0, 0));
+    w.do_cycles(cycle_count(&w.params, &[NOP, JMP, TUL, JMZ]));
+    assert_eq!(NOP, w.creature_at((0, 0)).unwrap().current_instr());
 }
 
 
@@ -337,7 +339,7 @@ fn jump_relative_jumps_to_same_position_in_next_ring() {
 fn branch_food_here_jumps_when_food_is_here() {
     let mut w = World::for_testing();
     w.add_plant(Plant::new(), (0, 0));
-    w.add_creature(Creature::new(vec![NOP, BFH, NOP, NOP, EAT]), (0, 0));
+    w.add_creature(Creature::new(vec![NOP, BFH, NOP, EAT, NOP, NOP]), (0, 0));
     w.do_cycles(cycle_count(&w.params, &[NOP, BFH]));
     assert_eq!(EAT, w.creature_at((0, 0)).unwrap().current_instr());
 }
@@ -353,9 +355,10 @@ fn branch_food_here_continues_when_no_food_is_here() {
 #[test]
 fn branch_food_ahead_jumps_when_plant_is_int_view_distance() {
     let mut w = World::for_testing();
+    w.params.ring_size = 3;
     w.params.view_distance = 4;
     w.add_plant(Plant::new(), (4, 0));
-    w.add_creature(Creature::new(vec![TUR, BFA, MOV, NOP, EAT]), (0, 0));
+    w.add_creature(Creature::new(vec![TUR, BFA, MOV, EAT]), (0, 0));
     w.do_cycles(cycle_count(&w.params, &[TUR, BFA]));
     assert_eq!(EAT, w.creature_at((0, 0)).unwrap().current_instr());
 

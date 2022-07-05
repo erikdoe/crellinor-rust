@@ -35,7 +35,7 @@ impl World {
     }
 
     pub fn for_testing() -> World {
-        let params = Params::new();
+        let params = Params::for_testing();
         let terrain = Terrain::with_size(params.world_size);
         World {
             name: None,
@@ -186,7 +186,7 @@ impl World {
         });
 
         if let Some(name) = &self.name {
-            utils::write_logfile(&name, &serde_json::to_string_pretty(&json).unwrap());
+            utils::write_logfile(&name, &to_string_pretty(&json).unwrap());
         }
     }
 }
@@ -203,10 +203,10 @@ mod tests {
         w.params.set_instr_cycles(TUR, 2);
         w.params.set_instr_cycles(MOV, 2);
         w.params.creature_max_age = 5;
-        w.add_creature(Creature::new(vec![TUR]), (1, 1));
+        w.add_creature(Creature::new(vec![TUR, TUR, TUR]), (1, 1));
         w.do_cycles(2);
-        w.add_creature(Creature::new(vec![TUR]), (2, 2));
-        w.add_creature(Creature::new(vec![TUR, MOV]), (3, 3));
+        w.add_creature(Creature::new(vec![TUR, TUR, TUR]), (2, 2));
+        w.add_creature(Creature::new(vec![TUR, MOV, MOV]), (3, 3));
         w.do_cycles(2);
         assert_eq!(180, w.creature_at((1, 1)).unwrap().bearing);
         assert_eq!(90, w.creature_at((2, 2)).unwrap().bearing);

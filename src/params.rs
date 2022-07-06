@@ -16,7 +16,6 @@ pub struct Params {
 
     pub plant_start_ep: u32,
     pub plant_prob: f64,
-    pub plant_prob_end: f64,
 
     pub creature_max_age: u64,
     pub creature_start_ep: u32,
@@ -45,7 +44,6 @@ impl Params {
 
             plant_start_ep: 1000,
             plant_prob: 0.25,
-            plant_prob_end: 0.25,
 
             creature_start_ep: 500,
             creature_max_ep: 5000,

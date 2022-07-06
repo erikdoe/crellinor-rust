@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 use serde_json::*;
 
 use crate::creature::Creature;
@@ -8,7 +7,7 @@ use crate::plant::Plant;
 use crate::random::RNG;
 use crate::terrain::Terrain;
 use crate::log::Log;
-use crate::genetics;
+use crate::program;
 use crate::utils;
 
 
@@ -80,7 +79,7 @@ impl World {
 
     pub fn add_initial_plants_and_creatures(&mut self) {
         for _ in 0..self.params.start_pop_size {
-            self.add_random_creature()
+            self.add_start_creature()
         }
         for _ in 0..self.params.start_plant_count {
             let ep = self.params.plant_start_ep;
@@ -88,10 +87,13 @@ impl World {
         }
     }
 
-    fn add_random_creature(&mut self) -> () {
-        let prog = genetics::rand_program(&self.params, &mut self.random);
+    fn add_start_creature(&mut self) -> () {
+        let p = &self.params;
+        let mut prog = program::base_strategy(p.ring_size, &mut self.random);
+        let mut rand = program::rand_program(p.instr_list(), p.ring_size * (p.ring_count - 1), &mut self.random);
+        prog.append(&mut rand);
         let mut creature = Creature::new(prog);
-        creature.ep = self.params.creature_start_ep;
+        creature.ep = p.creature_start_ep;
         if let Some(pos) = self.terrain.rand_free_pos(&mut self.random) {
             self.add_creature(creature, pos);
         }
@@ -127,10 +129,11 @@ impl World {
 
     fn plant_prob(&self) -> f64 {
         let p = &self.params;
-        let we = p.world_end as f64;
-        let t = self.cycle as f64;
-        let f = ((PI * t / we).cos() + 1.0) / 2.0;
-        p.plant_prob_end + f * (p.plant_prob - p.plant_prob_end)
+        // let we = p.world_end as f64;
+        // let t = self.cycle as f64;
+        // let f = ((PI * t / we).cos() + 1.0) / 2.0;
+        // p.plant_prob_end + f * (p.plant_prob - p.plant_prob_end)
+        p.plant_prob
     }
 
     fn process_all_creatures(&mut self) {
@@ -167,8 +170,8 @@ impl World {
             self.log.add_entry(self.cycle);
             let num_creatures = self.num_creatures();
             self.log.set_num_creatures(num_creatures);
-            if self.cycle >= self.params.world_end {
-                self.log.set_programs(self.terrain.all_creatures());
+            if self.cycle == log_period || self.cycle >= self.params.world_end {
+                self.log.set_programs(self.terrain.all_creatures(), self.params.ring_size);
             }
         }
     }
@@ -217,17 +220,17 @@ mod tests {
         assert_eq!(90, w.creature_at((4, 3)).unwrap().bearing);
     }
 
-    #[test]
-    fn plant_reduction() {
-        let mut w = World::for_testing();
-        w.params.plant_prob = 0.2;
-        w.params.plant_prob_end = 0.1;
-        w.params.world_end = 2_000_000;
-
-        assert_eq!(0.2, w.plant_prob());
-        w.cycle = 1_000_000;
-//        assert_eq!(0.15, w.plant_prob());  TODO: precision problem
-        w.cycle = 2_000_000;
-        assert_eq!(0.1, w.plant_prob());
-    }
+//     #[test]
+//     fn plant_reduction() {
+//         let mut w = World::for_testing();
+//         w.params.plant_prob = 0.2;
+//         w.params.plant_prob_end = 0.1;
+//         w.params.world_end = 2_000_000;
+//
+//         assert_eq!(0.2, w.plant_prob());
+//         w.cycle = 1_000_000;
+// //        assert_eq!(0.15, w.plant_prob());  TODO: precision problem
+//         w.cycle = 2_000_000;
+//         assert_eq!(0.1, w.plant_prob());
+//     }
 }

@@ -9,7 +9,7 @@ use crate::world::World;
 use crate::utils::round;
 
 
-const NUM_SIMS: u32 = 24000;
+const NUM_SIMS: u32 = 600;
 const NUM_THREADS: u32 = 6;
 
 
@@ -57,44 +57,55 @@ fn run_world(thread_num: u32, sim_num: u32, mut world: World) {
 
 fn make_world() -> World {
     let mut rng = RNG::new();
-    let plant_start_ep = 1500;
-    let creature_start_ep = 1500;
+
+    let target_pop_size = 400;
+    let plant_start_ep = 800;
+    let plant_prob = round(target_pop_size as f64 / plant_start_ep as f64, 3);
+
+    let world_size = 200;
+    let ep_per_lane = world_size * (10 + 5);
+
+    let eat_ep = plant_start_ep; // can eat entire plant
+
 
     let params = Params {
-        world_end: 800_000,
-        log_interval: 2000,
+        world_end: 1_000_000,
+        log_interval: 1_000,
 
         world_size: 200,
-        start_pop_size: 1000,
-        start_plant_count: 8000,
+        start_pop_size: target_pop_size,
+        start_plant_count: target_pop_size * 2,
 
         plant_start_ep,
-        plant_prob: round(180.0 / plant_start_ep as f64, 3),
-        plant_prob_end: round(60.0 / plant_start_ep as f64, 3),
+        plant_prob,
 
-        creature_max_age: rng.choose(&[60_000, 65_000, 70_000, 75_000]),
-        creature_start_ep,
-        creature_max_ep: 20_000,
+        creature_max_age: 50_000,
+        creature_start_ep: ep_per_lane,
+        creature_max_ep: 3 * ep_per_lane,
 
-        eat_ep: 750,
-        min_mating_ep: creature_start_ep * 2 + 200,  // should be greater than 2*start
-        view_distance: 8,
+        eat_ep,
+        min_mating_ep: ep_per_lane * 2,
+        view_distance: 5,
 
-        ring_count: rng.choose(&[3, 4, 5, 6, 7]),
-        ring_size: rng.choose(&[3, 4, 5, 6, 7]),
+        ring_count: rng.choose(&[2, 3, 4]),
+        ring_size: rng.choose(&[3, 4, 5]),
 
         instructions: hashmap! {
-            EAT => 30,
-            MOV => 20,
-            TUR => 10,
-            TUL => 10,
+            EAT => 10,
+            MOV =>  5,
+            TUR =>  3,
+            TUL =>  3,
             NOP =>  1,
-            JMP =>  2,
-            JMZ =>  2,
-            BFH =>  3,
-            BFA =>  3,
+            JMP =>  1,
+            JMZ =>  1,
+            BFH =>  1,
+            BFA =>  1,
         },
     };
-    World::new("eat30", params)
+
+
+
+
+    World::new("progsize", params)
 }
 

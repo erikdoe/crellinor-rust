@@ -69,23 +69,6 @@ impl Creature {
         self.lastprocd - self.bcycle
     }
 
-    pub fn pp_program(&self, rsize: usize) -> Vec<String> {
-        let mut out = Vec::new();
-        let mut i = 0;
-        for _ in 0..(self.program.len() / rsize) {
-            let mut ring = String::new();
-            for _ in 0..rsize {
-                ring.push_str(&format!("{:?} ", self.program[i]));
-                i += 1;
-            }
-            out.push(ring);
-        }
-        out
-    }
-
-    pub fn program_as_string(&self) -> String {
-        format!("{:5}  {:?}", self.age(), self.program)
-    }
 
     // core processing loop
 
@@ -256,15 +239,6 @@ impl<'a> PContext<'a> {
 mod tests {
     use super::*;
     use crate::program::Instr::*;
-
-    #[test]
-    fn pp_program() {
-        let c = Creature::new(vec![MOV, TUL, TUR, EAT, NOP, BFA]);
-
-        let out = c.pp_program(3);
-
-        println!("** {:?}", out);
-    }
 
     #[test]
     fn age_when_not_processed_yet() {

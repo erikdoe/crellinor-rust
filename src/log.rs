@@ -48,10 +48,10 @@ impl Log {
         self.set(|e| e.num_creatures = Some(n));
     }
 
-    pub fn set_programs(&mut self, creatures: Vec<&Creature>) {
+    pub fn set_programs(&mut self, creatures: Vec<&Creature>, ring_size: usize) {
         let mut programs = HashMap::new();
         for i in 0..creatures.len() {
-            let p = creatures[i].program_as_string();
+            let p = self.program_as_string(creatures[i], ring_size);
             let mut count = 1;
             if let Some(n) = programs.get(&p) {
                 count += n;
@@ -61,6 +61,19 @@ impl Log {
         self.set(|e| e.num_programs = Some(programs.len() as u32));
         self.set(|e| e.programs = Some(programs.clone()));
     }
+
+
+    pub fn program_as_string(&self, creature: &Creature, ring_size: usize) -> String {
+        let mut out = String::new();
+        for i in 0..creature.program.len() {
+            out.push_str(&format!("{:?} ", creature.program[i]));
+            if (i + 1) % ring_size == 0 {
+                out.push_str("  ");
+            }
+        }
+        format!("{:5}  {}", creature.age(), out)
+    }
+
 
 }
 

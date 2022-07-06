@@ -1,14 +1,5 @@
-use core::iter;
 use crate::program::Instr;
 use crate::random::RNG;
-use crate::params::Params;
-
-
-pub fn rand_program(params: &Params, rng: &mut RNG) -> Vec<Instr> {
-    let instr_list = params.instr_list();
-    iter::repeat_with(|| instr_list[rng.next_usize(instr_list.len())].clone())
-        .take(params.ring_count * params.ring_size).collect()
-}
 
 
 pub fn single_point_crossover<'a>(p0: &Vec<Instr>, p1: &Vec<Instr>, rng: &'a mut RNG) -> Vec<Instr> {
@@ -34,31 +25,6 @@ pub fn cut_n_splice_crossover<'a>(p0: &Vec<Instr>, p1: &Vec<Instr>, rng: &'a mut
 mod tests {
     use super::*;
     use crate::program::Instr::*;
-
-    #[test]
-    fn random_program_with_two_instructions() {
-        let params = Params::new();
-        let mut rng = RNG::new();
-        rng.set_next_values(&[2, 3]);
-
-        let prog = rand_program(&params, &mut rng);
-
-        assert_eq!(params.instr_list()[2], &prog[0]);
-        assert_eq!(params.instr_list()[3], &prog[1]);
-    }
-
-    #[test]
-    fn random_programs_with_same_seed_are_identical() {
-        let params = Params::new();
-        let mut rng0 = RNG::from_seed(&[1092393775, 1536878131, 2147757716, 2050134695]);
-        let mut rng1 = RNG::from_seed(&[1092393775, 1536878131, 2147757716, 2050134695]);
-
-        let prog0 = rand_program(&params, &mut rng0);
-        let prog1 = rand_program(&params, &mut rng1);
-
-        assert_eq!(prog0, prog1);
-    }
-
 
     #[test]
     fn single_point_crossover_with_p0_first() {

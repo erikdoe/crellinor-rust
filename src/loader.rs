@@ -31,13 +31,14 @@ impl Worldfile {
 }
 
 
-pub fn load_and_run(path: &str) {
+
+pub fn load_world(path: &str) -> World {
     let name = Path::new(path).file_stem().unwrap().to_str().unwrap();
     println!("Loading world from {}", path);
     let wf = Worldfile::from_file(path).expect("Failed to load worldfile");
     let mut w = World::new(name, wf.params);
     w.random = RNG::from_seed(&wf.seed);
-    run_world(0, w);
+    w
 }
 
 
@@ -57,4 +58,8 @@ fn run_world(thread_num: u32, mut world: World) {
              thread_num, world.cycle);
     println!("{:?}: Processed {}×10\u{2076} program cycles in {}s ({} cycles/ms).",
              thread_num, world.log.total_cycles/1_000_000, millis/1000, cpm);
+}
+
+pub fn load_and_run(path: &str) {
+    run_world(0, load_world(path));
 }

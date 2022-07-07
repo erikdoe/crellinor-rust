@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use serde_derive::*;
 use crate::creature::Creature;
@@ -6,6 +7,7 @@ use crate::creature::Creature;
 pub struct Log {
     pub entries: Vec<LogEntry>,
     pub total_cycles: u64,
+    pub max_pop: u32,
 }
 
 
@@ -20,17 +22,17 @@ pub struct LogEntry {
 
 
 impl Log {
-
     pub fn new() -> Log {
         Log {
             entries: Vec::new(),
             total_cycles: 0,
+            max_pop: 0
         }
     }
 
     pub fn add_entry(&mut self, cycle: u64) {
         self.entries.push(
-            LogEntry{
+            LogEntry {
                 cycle,
                 num_creatures: None,
                 num_programs: None,
@@ -46,12 +48,13 @@ impl Log {
 
     pub fn set_num_creatures(&mut self, n: u32) {
         self.set(|e| e.num_creatures = Some(n));
+        self.max_pop = max(self.max_pop, n);
     }
 
-    pub fn set_programs(&mut self, creatures: Vec<&Creature>, ring_size: usize) {
+    pub fn set_programs(&mut self, creatures: Vec<&Creature>) {
         let mut programs = HashMap::new();
         for i in 0..creatures.len() {
-            let p = self.program_as_string(creatures[i], ring_size);
+            let p = creatures[i].pp_program();
             let mut count = 1;
             if let Some(n) = programs.get(&p) {
                 count += n;
@@ -62,20 +65,8 @@ impl Log {
         self.set(|e| e.programs = Some(programs.clone()));
     }
 
-
-    pub fn program_as_string(&self, creature: &Creature, ring_size: usize) -> String {
-        let mut out = String::new();
-        for i in 0..creature.program.len() {
-            out.push_str(&format!("{:?} ", creature.program[i]));
-            if (i + 1) % ring_size == 0 {
-                out.push_str("  ");
-            }
-        }
-        format!("{:5}  {}", creature.age(), out)
-    }
-
-
 }
+
 
 
 

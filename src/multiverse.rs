@@ -1,4 +1,7 @@
 use std::cmp;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32};
+use core::sync::atomic::{Ordering};
 use std::time::Instant;
 use std::thread;
 use maplit::*;
@@ -9,7 +12,7 @@ use crate::world::World;
 use crate::utils::round;
 
 
-const NUM_SIMS: u32 = 600;
+const NUM_SIMS: u32 = 100;
 const NUM_THREADS: u32 = 6;
 
 
@@ -20,10 +23,16 @@ pub fn run() {
 
 fn run_multiverse(worldfn: fn() -> World) {
     let mut handles = Vec::new();
+    let counter = Arc::new(AtomicU32::new(0));
 
     for tnum in 0..NUM_THREADS {
+        let thread_counter = Arc::clone(&counter);
         let h = thread::spawn(move || {
-            for snum in 0..(NUM_SIMS / NUM_THREADS) {
+            loop {
+                let snum = thread_counter.fetch_add(1, Ordering::Relaxed);
+                if snum >= NUM_SIMS {
+                    break;
+                }
                 run_world(tnum, snum, worldfn());
             }
         });
@@ -59,33 +68,31 @@ fn make_world() -> World {
     let mut rng = RNG::new();
 
     let target_pop_size = 400;
-    let plant_start_ep = 800;
+    let plant_start_ep = rng.choose(&[800, 1600, 2400]);
     let plant_prob = round(target_pop_size as f64 / plant_start_ep as f64, 3);
 
-    let world_size = 200;
-    let ep_per_lane = world_size * (10 + 5);
+    let eat_ep = 800;
 
-    let eat_ep = plant_start_ep; // can eat entire plant
-
+    let creature_start_ep = rng.choose(&[1000, 2000]);
 
     let params = Params {
-        world_end: 1_000_000,
-        log_interval: 1_000,
+        world_end: 500_000,
+        log_interval: 2_500,
 
         world_size: 200,
-        start_pop_size: target_pop_size,
-        start_plant_count: target_pop_size * 2,
+        start_pop_size: 400,
+        start_plant_count: 400,
 
         plant_start_ep,
         plant_prob,
 
-        creature_max_age: 50_000,
-        creature_start_ep: ep_per_lane,
-        creature_max_ep: 3 * ep_per_lane,
+        creature_max_age: 30_000,
+        creature_start_ep,
+        creature_max_ep: creature_start_ep * 3,
 
         eat_ep,
-        min_mating_ep: ep_per_lane * 2,
-        view_distance: 5,
+        min_mating_ep: creature_start_ep * 2,
+        view_distance: 8,
 
         ring_count: rng.choose(&[2, 3, 4]),
         ring_size: rng.choose(&[3, 4, 5]),
@@ -103,9 +110,5 @@ fn make_world() -> World {
         },
     };
 
-
-
-
     World::new("progsize", params)
 }
-

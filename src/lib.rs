@@ -11,11 +11,12 @@ pub mod random;
 pub mod log;
 pub mod loader;
 pub mod world;
+pub mod web;
 
 pub fn run(worldfile_opt: Option<&String>)
 {
     if let Some(worldfile) = worldfile_opt {
-        loader::load_and_run(worldfile);
+        web::run(worldfile, "resources/ui", "localhost:3000");
     } else {
         multiverse::run();
     }

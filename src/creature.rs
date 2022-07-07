@@ -8,6 +8,7 @@ use crate::genetics;
 
 pub struct Creature {
     pub program: Vec<Instr>,
+    pub rsize: usize,
 
     pub bcycle: u64,
     pub lastprocd: u64,
@@ -21,9 +22,10 @@ pub struct Creature {
 
 
 impl Creature {
-    pub fn new(program: Vec<Instr>) -> Creature {
+    pub fn new(program: Vec<Instr>, ring_size: usize) -> Creature {
         Creature {
             program,
+            rsize: ring_size,
             bcycle: 0,
             lastprocd: 0,
             bearing: 0,
@@ -39,16 +41,16 @@ impl Creature {
         self.pc = 0;
     }
 
-    pub fn pc_incr(&mut self, ring_size: usize) {
-        let pc_ring = self.pc % ring_size;
-        let new_pc_ring = (pc_ring + 1) % ring_size;
+    pub fn pc_incr(&mut self) {
+        let pc_ring = self.pc % self.rsize;
+        let new_pc_ring = (pc_ring + 1) % self.rsize;
         self.pc = self.pc - pc_ring + new_pc_ring;
     }
 
-    pub fn pc_incr_ring(&mut self, ring_size: usize, ring_count: usize) {
-        let ring = self.pc / ring_size;
-        let new_ring = (ring + 1) % ring_count;
-        self.pc = new_ring * ring_size;
+    pub fn pc_incr_ring(&mut self) {
+        let ring = self.pc / self.rsize;
+        let new_ring = (ring + 1) % (self.program.len() / self.rsize);
+        self.pc = new_ring * self.rsize;
     }
 
     pub fn current_instr(&self) -> Instr {
@@ -69,6 +71,16 @@ impl Creature {
         self.lastprocd - self.bcycle
     }
 
+    pub fn pp_program(&self) -> String {
+        let mut out = String::new();
+        for i in 0..self.program.len() {
+            out.push_str(&format!("{:?} ", self.program[i]));
+            if (i + 1) % self.rsize == 0 {
+                out.push_str("; ");
+            }
+        }
+        out
+    }
 
     // core processing loop
 
@@ -92,7 +104,7 @@ impl Creature {
             return;
         }
         let instr = self.current_instr();
-        self.pc_incr(ctx.params.ring_size);
+        self.pc_incr();
         self.exec_instr(instr, ctx);
     }
 
@@ -149,8 +161,8 @@ impl Creature {
 
     // jumps
 
-    fn exec_jump(&mut self, ctx: &PContext) {
-        self.pc_incr_ring(ctx.params.ring_size, ctx.params.ring_count)
+    fn exec_jump(&mut self, _: &PContext) {
+        self.pc_incr_ring()
     }
 
     fn exec_jump_zero(&mut self, _: &PContext) {
@@ -184,14 +196,11 @@ impl Creature {
     // mating
 
     fn try_mate(&mut self, partner_pos: (u32, u32), offspring_pos: (u32, u32), ctx: &mut PContext) {
-        let mut result: Option<Creature> = None;
         if let Some(other) = ctx.terrain.creature_at(partner_pos) {
             if self.can_mate(other, ctx) {
-                result = Some(self.mate(other, ctx.params, ctx.random, ctx.world_cycle));
+                let offspring = self.mate(other, ctx.params, ctx.random, ctx.world_cycle);
+                ctx.terrain.set_creature_at(Some(offspring), offspring_pos);
             }
-        }
-        if let Some(offspring) = result {
-            ctx.terrain.set_creature_at(Some(offspring), offspring_pos);
         }
     }
 
@@ -202,10 +211,11 @@ impl Creature {
 
     fn mate(&mut self, other: &Creature, params: &Params, random: &mut RNG, world_cycle: u64) -> Creature {
         let program = genetics::cut_n_splice_crossover(&self.program, &other.program, random);
-        let mut offspring = Creature::new(program);
+        let mut offspring = Creature::new(program, self.rsize);
         offspring.bcycle = world_cycle;
         offspring.ep += params.creature_start_ep;
         self.ep -= params.creature_start_ep;
+        offspring.bearing = random.choose(&[0, 90, 180, 270]);
         return offspring;
     }
 }
@@ -242,41 +252,41 @@ mod tests {
 
     #[test]
     fn age_when_not_processed_yet() {
-        let mut c = Creature::new(vec![NOP]);
+        let mut c = Creature::new(vec![NOP], 3);
         c.bcycle = 512;
         assert_eq!(0, c.age())
     }
 
     #[test]
     fn pc_stays_in_ring0() {
-        let mut c = Creature::new(vec![NOP]);
+        let mut c = Creature::new(vec![NOP], 4);
         c.pc = 3;
-        c.pc_incr(4);
+        c.pc_incr();
         assert_eq!(0, c.pc)
     }
 
     #[test]
     fn pc_stays_in_ring1() {
-        let mut c = Creature::new(vec![NOP]);
+        let mut c = Creature::new(vec![NOP], 4);
         c.pc = 6;
-        c.pc_incr(4);
-        c.pc_incr(4);
+        c.pc_incr();
+        c.pc_incr();
         assert_eq!(4, c.pc)
     }
 
     #[test]
     fn pc_moves_to_next_ring() {
-        let mut c = Creature::new(vec![NOP]);
+        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP], 4);
         c.pc = 6;
-        c.pc_incr_ring(4, 3);
+        c.pc_incr_ring();
         assert_eq!(8, c.pc)
     }
 
     #[test]
     fn pc_wraps_to_first_ring() {
-        let mut c = Creature::new(vec![NOP]);
+        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP], 4);
         c.pc = 6;
-        c.pc_incr_ring(4, 2);
+        c.pc_incr_ring();
         assert_eq!(0, c.pc)
     }
 }

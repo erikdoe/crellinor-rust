@@ -92,8 +92,9 @@ impl World {
         let mut prog = program::base_strategy(p.ring_size, &mut self.random);
         let mut rand = program::rand_program(p.instr_list(), p.ring_size * (p.ring_count - 1), &mut self.random);
         prog.append(&mut rand);
-        let mut creature = Creature::new(prog);
+        let mut creature = Creature::new(prog, p.ring_size);
         creature.ep = p.creature_start_ep;
+        creature.bearing = self.random.choose(&[0, 90, 180, 270]);
         if let Some(pos) = self.terrain.rand_free_pos(&mut self.random) {
             self.add_creature(creature, pos);
         }
@@ -171,7 +172,7 @@ impl World {
             let num_creatures = self.num_creatures();
             self.log.set_num_creatures(num_creatures);
             if self.cycle == log_period || self.cycle >= self.params.world_end {
-                self.log.set_programs(self.terrain.all_creatures(), self.params.ring_size);
+                self.log.set_programs(self.terrain.all_creatures());
             }
         }
     }
@@ -206,10 +207,10 @@ mod tests {
         w.params.set_instr_cycles(TUR, 2);
         w.params.set_instr_cycles(MOV, 2);
         w.params.creature_max_age = 5;
-        w.add_creature(Creature::new(vec![TUR, TUR, TUR]), (1, 1));
+        w.add_creature(Creature::new(vec![TUR, TUR, TUR], 3), (1, 1));
         w.do_cycles(2);
-        w.add_creature(Creature::new(vec![TUR, TUR, TUR]), (2, 2));
-        w.add_creature(Creature::new(vec![TUR, MOV, MOV]), (3, 3));
+        w.add_creature(Creature::new(vec![TUR, TUR, TUR], 3), (2, 2));
+        w.add_creature(Creature::new(vec![TUR, MOV, MOV], 3), (3, 3));
         w.do_cycles(2);
         assert_eq!(180, w.creature_at((1, 1)).unwrap().bearing);
         assert_eq!(90, w.creature_at((2, 2)).unwrap().bearing);

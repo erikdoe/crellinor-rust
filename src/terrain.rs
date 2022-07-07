@@ -43,6 +43,28 @@ impl Terrain {
             .collect()
     }
 
+    pub fn all_creatures_with_pos(&self) -> Vec<((u32, u32), &Creature)> {
+        self.occupied
+            .iter()
+            .filter_map(|&i| {
+                let p = self.idx_to_pos(i as usize);
+                self.creature_at(p).map(|c| (p, c))
+            })
+            .collect()
+    }
+
+    pub fn all_plants_with_pos(&self) -> Vec<((u32, u32), &Plant)> {
+        let mut out = Vec::new();
+        for y in 0..self.size {
+            for x in 0..self.size {
+                let i = self.pos_to_idx((x, y));
+                if self.plants[i].is_some() {
+                    out.push(((x, y), self.plants[i].as_ref().unwrap()));
+                }
+            }
+        }
+        out
+    }
 
     // translating positions and indices (private)
 
@@ -237,25 +259,25 @@ mod tests {
     #[test]
     fn free_pos_north_occupied() {
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP])), (1, 0));
+        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 0));
         assert_eq!(Some((2, 1)), t.free_pos_near((1, 1)));
     }
 
     #[test]
     fn free_pos_all_occupied() {
         let mut w = Terrain::with_size(10);
-        w.set_creature_at(Some(Creature::new(vec![NOP])), (1, 0));
-        w.set_creature_at(Some(Creature::new(vec![NOP])), (2, 1));
-        w.set_creature_at(Some(Creature::new(vec![NOP])), (1, 2));
-        w.set_creature_at(Some(Creature::new(vec![NOP])), (0, 1));
+        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 0));
+        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (2, 1));
+        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 2));
+        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (0, 1));
         assert_eq!(None, w.free_pos_near((1, 1)));
     }
 
     #[test]
     fn adding_to_occupied_index_list() {
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP])), (4, 7));
-        t.set_creature_at(Some(Creature::new(vec![MOV])), (3, 3));
+        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
+        t.set_creature_at(Some(Creature::new(vec![MOV], 3)), (3, 3));
         let list = &t.occupied;
         assert_eq!(2, list.len());
         // slightly white-box; theoretically the index could be at list[1]
@@ -265,8 +287,8 @@ mod tests {
     #[test]
     fn all_creatures() {
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP])), (4, 7));
-        t.set_creature_at(Some(Creature::new(vec![MOV])), (3, 3));
+        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
+        t.set_creature_at(Some(Creature::new(vec![MOV], 3)), (3, 3));
 
         let list = t.all_creatures();
 
@@ -275,4 +297,32 @@ mod tests {
         assert_eq!(true, list.iter().find(|&c| c.program == vec![MOV]).is_some());
     }
 
+    #[test]
+    fn all_creatures_with_pos() {
+        let mut t = Terrain::with_size(10);
+        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
+
+        let list = t.all_creatures_with_pos();
+
+        assert_eq!(1, list.len());
+        assert_eq!((4, 7), list[0].0);
+        assert_eq!(vec![NOP], list[0].1.program);
+    }
+
+    #[test]
+    fn all_plants_with_pos() {
+        let mut t = Terrain::with_size(10);
+        t.set_plant_at(Some(Plant::with_ep(72)), (7, 2));
+        t.set_plant_at(Some(Plant::with_ep(14)), (1, 4));
+
+        let mut list = t.all_plants_with_pos();
+
+        assert_eq!(2, list.len());
+        list.sort_by(|a, b| a.1.ep.cmp(&b.1.ep) );
+
+        assert_eq!(14, list[0].1.ep);
+        assert_eq!((1, 4), list[0].0);
+        assert_eq!(72, list[1].1.ep);
+        assert_eq!((7, 2), list[1].0);
+    }
 }

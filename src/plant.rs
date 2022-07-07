@@ -11,5 +11,10 @@ impl Plant {
         }
     }
 
-}
+    pub fn with_ep(ep: u32) -> Plant {
+        Plant {
+            ep
+        }
+    }
 
+}

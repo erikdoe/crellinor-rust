@@ -68,16 +68,16 @@ fn make_world() -> World {
     let mut rng = RNG::new();
 
     let target_pop_size = 400;
-    let plant_start_ep = rng.choose(&[800, 1600, 2400]);
+    let plant_start_ep = 800;
     let plant_prob = round(target_pop_size as f64 / plant_start_ep as f64, 3);
 
-    let eat_ep = 800;
+    let eat_ep = 400;
 
     let creature_start_ep = rng.choose(&[1000, 2000]);
 
     let params = Params {
-        world_end: 500_000,
-        log_interval: 2_500,
+        world_end: 1_000_000,
+        log_interval: 2_000,
 
         world_size: 200,
         start_pop_size: 400,
@@ -94,7 +94,7 @@ fn make_world() -> World {
         min_mating_ep: creature_start_ep * 2,
         view_distance: 8,
 
-        ring_count: rng.choose(&[2, 3, 4]),
+        ring_count: rng.choose(&[2, 3]),
         ring_size: rng.choose(&[3, 4, 5]),
 
         instructions: hashmap! {

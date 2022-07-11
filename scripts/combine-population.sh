@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 
-#find . -name "*.json" -not -exec jq '.cycles' {} \; -print
-find . -name "log*.json" -exec  ../../scripts/population-as-csv.sh {} \;
-#find . -name "log*json" -exec grep -q '"creature_max_age": 75000' {} \; -and -exec grep -q '"ring_count": 4' {} \; -and -exec grep -q '"ring_len": 7' {} \; -exec population-as-csv.sh {} \; -print
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-seq 0 60 |
+# convert population from JSON files to CSV
+find . -name "log*.json" -exec  $SCRIPTPATH/population-as-csv.sh {} \;
+
+# write header to CSV file
+seq 0 40 |
 paste -d "," -s - |
 sed "s/^0/cycle/" |
 sed "s/,/,f/g"> _population.csv
 
+# write population of top 40 runs as columns to CSV file and create text file
+# that lists the filenames of the top 40 runs in same order as the columns
 find log*.csv -exec wc -l {} \; |
 sort -rn |
-head -60 |
+head -40 |
 tr -s " " "," |
 cut -d "," -f 2- |
-tee _top60.txt |
+tee _top40.txt |
 xargs paste -d ";" |
 grep -v cycle |
 sed "s/;[0-9]*,/,/g" |

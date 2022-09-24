@@ -21,7 +21,6 @@ pub fn rand_program(instr_list: Vec<&Instr>, size:usize, rng: &mut RNG) -> Vec<I
         .take(size).collect()
 }
 
-
 pub fn base_strategy(size: usize, rng: &mut RNG) -> Vec<Instr> {
     let instr_list = &[ Instr:: MOV, Instr::EAT ];
     let mut idx = rng.next_usize(2);
@@ -38,7 +37,7 @@ mod tests {
 
     #[test]
     fn random_program_with_two_instructions() {
-        let params = Params::new();
+        let params = Params::for_testing();
         let mut rng = RNG::new();
         rng.set_next_values(&[2, 3]);
 
@@ -50,7 +49,7 @@ mod tests {
 
     #[test]
     fn random_programs_with_same_seed_are_identical() {
-        let params = Params::new();
+        let params = Params::for_testing();
         let mut rng0 = RNG::from_seed(&[1092393775, 1536878131, 2147757716, 2050134695]);
         let mut rng1 = RNG::from_seed(&[1092393775, 1536878131, 2147757716, 2050134695]);
 

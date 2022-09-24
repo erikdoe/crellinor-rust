@@ -20,9 +20,16 @@ pub fn cut_n_splice_crossover<'a>(p0: &Vec<Instr>, p1: &Vec<Instr>, rng: &'a mut
     pc
 }
 
+pub fn mutation<'a>(p: &mut Vec<Instr>, instr_list: Vec<&Instr>, rng:&'a mut RNG) {
+    let mpt = rng.next_usize(p.len());
+    let instr = instr_list[rng.next_usize(instr_list.len())].clone();
+    p[mpt] = instr;
+}
+
 
 #[cfg(test)]
 mod tests {
+    use crate::params::Params;
     use super::*;
     use crate::program::Instr::*;
 
@@ -60,5 +67,18 @@ mod tests {
         let pc = cut_n_splice_crossover(&p0, &p1, &mut rng);
 
         assert_eq!([TUL, TUL, NOP, NOP, TUR], pc.as_slice());
+    }
+
+    #[test]
+    fn mutation_at_point() {
+        let mut rng = RNG::new();
+        let params = Params::for_testing();
+        rng.set_next_values(&[2 /* mpt */, 2 /* instr */]);
+        let mut p = vec![MOV, EAT, NOP, NOP];
+
+        mutation(&mut p, params.instr_list(),&mut rng);
+
+        assert_eq!([MOV, EAT, TUL, NOP], p.as_slice());
+
     }
 }

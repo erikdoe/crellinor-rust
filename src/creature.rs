@@ -4,6 +4,7 @@ use crate::params::Params;
 use crate::random::RNG;
 use crate::terrain::Terrain;
 use crate::genetics;
+use crate::log::Log;
 
 
 pub struct Creature {
@@ -22,14 +23,14 @@ pub struct Creature {
 
 
 impl Creature {
-    pub fn new(program: Vec<Instr>, ring_size: usize) -> Creature {
+    pub fn new(program: Vec<Instr>, params: &Params) -> Creature {
         Creature {
             program,
-            rsize: ring_size,
+            rsize: params.ring_size,
             bcycle: 0,
             lastprocd: 0,
             bearing: 0,
-            ep: 0,
+            ep: params.creature_start_ep,
             pc: 0,
             cc: 0,
         }
@@ -122,6 +123,7 @@ impl Creature {
             Instr::BFA => self.exec_branch_food_ahead(ctx),
             Instr::NOP => self.exec_nop(),
         }
+        ctx.stats.incr_instr_counter(instr);
     }
 
 
@@ -211,11 +213,10 @@ impl Creature {
 
     fn mate(&mut self, other: &Creature, params: &Params, random: &mut RNG, world_cycle: u64) -> Creature {
         let program = genetics::cut_n_splice_crossover(&self.program, &other.program, random);
-        let mut offspring = Creature::new(program, self.rsize);
+        let mut offspring = Creature::new(program, params);
         offspring.bcycle = world_cycle;
-        offspring.ep += params.creature_start_ep;
-        self.ep -= params.creature_start_ep;
         offspring.bearing = random.choose(&[0, 90, 180, 270]);
+        self.ep -= offspring.ep;
         return offspring;
     }
 }
@@ -225,6 +226,7 @@ impl Creature {
 
 pub struct PContext<'a> {
     params: &'a Params,
+    stats: &'a mut Log,
     random: &'a mut RNG,
     terrain: &'a mut Terrain,
     world_cycle: u64,
@@ -232,10 +234,11 @@ pub struct PContext<'a> {
 }
 
 impl<'a> PContext<'a> {
-    pub fn new(params: &'a Params, random: &'a mut RNG, terrain: &'a mut Terrain,
+    pub fn new(params: &'a Params, stats: &'a mut Log, random: &'a mut RNG, terrain: &'a mut Terrain,
                world_cycle: u64, pos: (u32, u32)) -> PContext<'a> {
         PContext {
             params,
+            stats,
             random,
             terrain,
             world_cycle,
@@ -252,23 +255,23 @@ mod tests {
 
     #[test]
     fn age_when_not_processed_yet() {
-        let mut c = Creature::new(vec![NOP], 3);
+        let mut c = Creature::new(vec![NOP], &Params::for_testing());
         c.bcycle = 512;
         assert_eq!(0, c.age())
     }
 
     #[test]
     fn pc_stays_in_ring0() {
-        let mut c = Creature::new(vec![NOP], 4);
-        c.pc = 3;
+        let mut c = Creature::new(vec![NOP], &Params::for_testing());
+        c.pc = 2;
         c.pc_incr();
         assert_eq!(0, c.pc)
     }
 
     #[test]
     fn pc_stays_in_ring1() {
-        let mut c = Creature::new(vec![NOP], 4);
-        c.pc = 6;
+        let mut c = Creature::new(vec![NOP], &Params::for_testing());
+        c.pc = 5;
         c.pc_incr();
         c.pc_incr();
         assert_eq!(4, c.pc)
@@ -276,16 +279,16 @@ mod tests {
 
     #[test]
     fn pc_moves_to_next_ring() {
-        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP], 4);
-        c.pc = 6;
+        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP], &Params::for_testing());
+        c.pc = 4;
         c.pc_incr_ring();
-        assert_eq!(8, c.pc)
+        assert_eq!(6, c.pc)
     }
 
     #[test]
     fn pc_wraps_to_first_ring() {
-        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP, NOP, NOP], 4);
-        c.pc = 6;
+        let mut c = Creature::new(vec![NOP, NOP, NOP, NOP, NOP, NOP], &Params::for_testing());
+        c.pc = 4;
         c.pc_incr_ring();
         assert_eq!(0, c.pc)
     }

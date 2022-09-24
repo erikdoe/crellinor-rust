@@ -66,6 +66,7 @@ impl Terrain {
         out
     }
 
+
     // translating positions and indices (private)
 
     fn idx_to_pos(&self, idx: usize) -> (u32, u32) {
@@ -78,13 +79,9 @@ impl Terrain {
     }
 
 
-    // calculating positions relative to each other
+    // calculating positions
 
     pub fn pos_ahead(&self, pos: (u32, u32), bearing: u16) -> (u32, u32) {
-        self.add_to_pos(pos, Terrain::dpos(bearing, 1))
-    }
-
-    pub fn pos_ahead_fast(&self, pos: (u32, u32), bearing: u16) -> (u32, u32) {
         let s = self.size;
         match bearing {
             0 => (pos.0, (pos.1 + s - 1) % s),
@@ -95,25 +92,7 @@ impl Terrain {
         }
     }
 
-    pub fn beam_ahead(&self, pos: (u32, u32), bearing: u16, length: u32) -> Vec<(u32, u32)> {
-        let mut beam = Vec::new();
-        for d in 1..=length {
-            beam.push(self.add_to_pos(pos, Terrain::dpos(bearing, d as i32)));
-        }
-        beam
-    }
-
     pub fn free_pos_near(&self, pos: (u32, u32)) -> Option<(u32, u32)> {
-        for bearing in [0, 90, 180, 270].iter() {
-            let p = self.pos_ahead(pos, *bearing as u16);
-            if self.creature_at(p).is_none() {
-                return Some(p);
-            }
-        }
-        None
-    }
-
-    pub fn free_pos_near_fast(&self, pos: (u32, u32)) -> Option<(u32, u32)> {
         let mut bearing = 0;
         for _ in 0..4 {
             let p = self.pos_ahead(pos, bearing);
@@ -123,24 +102,6 @@ impl Terrain {
             bearing += 90;
         }
         None
-    }
-
-    fn add_to_pos(&self, pos: (u32, u32), d: (i32, i32)) -> (u32, u32) {
-        // note: we're converting the values on pos into i32 for the calculation!
-        // adding s because % is remainder, and not modulo
-        let s: i32 = self.size as i32;
-        (((pos.0 as i32 + d.0 + s) % s) as u32,
-         ((pos.1 as i32 + d.1 + s) % s) as u32)
-    }
-
-    fn dpos(bearing: u16, n: i32) -> (i32, i32) {
-        match bearing {
-            0 => (0, -1 * n),
-            90 => (n, 0),
-            180 => (0, n),
-            270 => (-1 * n, 0),
-            _ => panic!("*** invalid bearing; found {}", bearing),
-        }
     }
 
     pub fn rand_pos(&self, rng: &mut RNG) -> (u32, u32) {
@@ -213,6 +174,7 @@ impl Terrain {
 
 #[cfg(test)]
 mod tests {
+    use crate::params::Params;
     use super::*;
     use crate::program::Instr::*;
 
@@ -241,16 +203,6 @@ mod tests {
     }
 
     #[test]
-    fn beam_ahead_north_with_wrapping() {
-        let w = &Terrain::with_size(10);
-        let beam = w.beam_ahead((1, 2), 0, 3);
-        assert_eq!(3, beam.len());
-        assert_eq!((1, 1), beam[0]);
-        assert_eq!((1, 0), beam[1]);
-        assert_eq!((1, 9), beam[2]);
-    }
-
-    #[test]
     fn free_pos_all_clear() {
         let w = &Terrain::with_size(10);
         assert_eq!(Some((1, 0)), w.free_pos_near((1, 1)));
@@ -258,26 +210,29 @@ mod tests {
 
     #[test]
     fn free_pos_north_occupied() {
+        let params = Params::for_testing();
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 0));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (1, 0));
         assert_eq!(Some((2, 1)), t.free_pos_near((1, 1)));
     }
 
     #[test]
     fn free_pos_all_occupied() {
-        let mut w = Terrain::with_size(10);
-        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 0));
-        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (2, 1));
-        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (1, 2));
-        w.set_creature_at(Some(Creature::new(vec![NOP], 3)), (0, 1));
-        assert_eq!(None, w.free_pos_near((1, 1)));
+        let params = Params::for_testing();
+        let mut t = Terrain::with_size(10);
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (1, 0));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (2, 1));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (1, 2));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (0, 1));
+        assert_eq!(None, t.free_pos_near((1, 1)));
     }
 
     #[test]
     fn adding_to_occupied_index_list() {
+        let params = Params::for_testing();
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
-        t.set_creature_at(Some(Creature::new(vec![MOV], 3)), (3, 3));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (4, 7));
+        t.set_creature_at(Some(Creature::new(vec![MOV], &params)), (3, 3));
         let list = &t.occupied;
         assert_eq!(2, list.len());
         // slightly white-box; theoretically the index could be at list[1]
@@ -286,9 +241,10 @@ mod tests {
 
     #[test]
     fn all_creatures() {
+        let params = Params::for_testing();
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
-        t.set_creature_at(Some(Creature::new(vec![MOV], 3)), (3, 3));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (4, 7));
+        t.set_creature_at(Some(Creature::new(vec![MOV], &params)), (3, 3));
 
         let list = t.all_creatures();
 
@@ -299,8 +255,9 @@ mod tests {
 
     #[test]
     fn all_creatures_with_pos() {
+        let params = Params::for_testing();
         let mut t = Terrain::with_size(10);
-        t.set_creature_at(Some(Creature::new(vec![NOP], 3)), (4, 7));
+        t.set_creature_at(Some(Creature::new(vec![NOP], &params)), (4, 7));
 
         let list = t.all_creatures_with_pos();
 

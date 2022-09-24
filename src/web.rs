@@ -14,12 +14,10 @@ use gotham::state::{FromState, State};
 use serde::Serialize;
 use serde_derive::*;
 
-use crate::loader;
 use crate::world::World;
 
-pub fn run(worldfile: &str, app_path: &str, addr: &str) {
+pub fn run(mut world: World, app_path: &str, addr: &str) {
     println!("Setting up world");
-    let mut world = loader::load_world(worldfile);
     world.add_initial_plants_and_creatures();
     println!("Listening for requests at http://{}", addr);
     let _ = gotham::start(addr.to_string(), router(app_path, WorldWrapper::new(world)));

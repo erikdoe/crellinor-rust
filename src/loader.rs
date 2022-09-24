@@ -1,10 +1,12 @@
-use core::cmp;
+use std::fs;
 use std::fs::File;
+use std::io::Write;
 use std::io::Read;
-use std::time::Instant;
 use std::path::Path;
 use serde_json;
 use serde_derive::*;
+use serde_json::{json, to_string_pretty};
+use uuid::Uuid;
 use crate::params::Params;
 use crate::world::World;
 use crate::random::RNG;
@@ -30,8 +32,6 @@ impl Worldfile {
     }
 }
 
-
-
 pub fn load_world(path: &str) -> World {
     let name = Path::new(path).file_stem().unwrap().to_str().unwrap();
     println!("Loading world from {}", path);
@@ -42,24 +42,30 @@ pub fn load_world(path: &str) -> World {
 }
 
 
-fn run_world(thread_num: u32, mut world: World) {
-    println!("{:?}: Starting simulation.", thread_num);
-
-    world.add_initial_plants_and_creatures();
-    let start = Instant::now();
-    world.do_cycles_until_end();
-    let end = Instant::now();
-    world.write_result();
-
-    let duration = end.duration_since(start);
-    let millis = cmp::max(1, duration.as_secs() * 1000 + duration.subsec_millis() as u64);
-    let cpm = world.log.total_cycles / millis;
-    println!("{:?}: Simulation ended after {} cycles.",
-             thread_num, world.cycle);
-    println!("{:?}: Processed {}×10\u{2076} program cycles in {}s ({} cycles/ms).",
-             thread_num, world.log.total_cycles/1_000_000, millis/1000, cpm);
+pub fn write_world_with_log(w: &World) {
+    // We're writing more fields but the loader will ignore them
+    let name = w.name.as_ref().expect("Can't write world without name");
+    let id = Uuid::new_v4().simple().to_string();
+    let json = json!({
+        "params": w.params,
+        "seed": w.random.seed(),
+        "cycles": w.cycle,
+        "status": ({ if w.num_creatures() > 1 { "ENDOK" } else { "ENDAB" } }),
+        "id": id,
+        "x-log": w.log,
+    });
+    write_worldfile(name, &id, &to_string_pretty(&json).unwrap());
 }
 
-pub fn load_and_run(path: &str) {
-    run_world(0, load_world(path));
+const OUTPUT_DIR: &str = "output";
+
+pub fn write_worldfile(name: &str, id: &str, text: &str) {
+    let path = format!("{}/{}", OUTPUT_DIR, name);
+    fs::create_dir_all(&path).expect("Unable to create output directory");
+    let filename = format!("{}/log-{}.json", &path, id);
+    let data = text.as_bytes();
+    let mut file = File::create(&filename).expect(&format!("Unable to create file {}", &filename));
+    file.write_all(data).expect("Write error");
+    file.sync_data().expect("Sync data error");
 }
+

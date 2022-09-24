@@ -16,6 +16,7 @@ pub struct Params {
 
     pub plant_start_ep: u32,
     pub plant_prob: f64,
+    pub plant_prob_end: f64,
 
     pub creature_max_age: u64,
     pub creature_start_ep: u32,
@@ -33,7 +34,7 @@ pub struct Params {
 
 
 impl Params {
-    pub fn new() -> Params {
+    pub fn for_testing() -> Params {
         Params {
             world_end: 3_000_000,
             log_interval: 100_000,
@@ -44,6 +45,7 @@ impl Params {
 
             plant_start_ep: 1000,
             plant_prob: 0.25,
+            plant_prob_end: 0.25,
 
             creature_start_ep: 500,
             creature_max_ep: 5000,
@@ -58,13 +60,6 @@ impl Params {
 
             instructions: Params::default_instr_map(),
         }
-    }
-
-    pub fn for_testing() -> Params {
-        let mut params = Params::new();
-        params.ring_size = 3;
-        params.ring_count = 2;
-        params
     }
 
     fn default_instr_map() -> HashMap<Instr, u64> {
@@ -96,5 +91,4 @@ impl Params {
     }
 
 }
-
 

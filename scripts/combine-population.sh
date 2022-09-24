@@ -2,8 +2,10 @@
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
+# combines longest runs into one CSV file, with each run's population in a column
+
 # convert population from JSON files to CSV
-find . -name "log*.json" -exec  $SCRIPTPATH/population-as-csv.sh {} \;
+find . -name "log*.json" -exec $SCRIPTPATH/json-to-csv-pop-only.sh {} \;
 
 # write header to CSV file
 seq 0 40 |
